@@ -1,0 +1,24 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "checked": true,
+      "item": "React"
+    },
+    {
+      "id": 3,
+      "checked": true,
+      "item": "Git"
+    },
+    {
+      "id": 4,
+      "checked": true,
+      "item": "Anglar"
+    },
+    {
+      "id": 5,
+      "checked": true,
+      "item": "Python"
+    }
+  ]
+}

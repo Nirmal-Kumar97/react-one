@@ -1,70 +1,89 @@
-// import logo from './logo.svg';
 import AddItem from './AddItem';
 import './App.css';
 import Content from './Content';
 import Footer from './Footer';
 import Header from './Header';
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import SearchItems from './SearchItems'
+import apiRequest from './ApiRequest';
 
 function App() {
-  // function handleNames() {
-  //   const names = ['grow', 'serve', 'give']
-  //   const int = Math.floor(Math.random() * 3);
-  //   return names[int]
-  // }
-  const [items, setItems] = useState(
-    // [
-    // {
-    //   id: 1,
-    //   checked: true,
-    //   item: 'Coading'
-    // },
-    // {
-    //   id: 2,
-    //   checked: false,
-    //   item: 'Playing'
-    // },
-    // {
-    //   id: 3,
-    //   checked: true,
-    //   item: 'Calling'
-    // },
-    // {
-    //   id: 4,
-    //   checked: true,
-    //   item: 'Cooking'
-    // },
-    // {
-    //   id: 5,
-    //   checked: true,
-    //   item: 'Reading'
-    // }
-    // ]
-    JSON.parse(localStorage.getItem('todo_list'))
-  );
-
+  const API_URL = "http://localhost:3001/items"
+  const [items, setItems] = useState([]);
   const [newItem, setNewItem] = useState('')
   const [search, setSearch] = useState('')
+  const [fetchError, setfetchError] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const addItem = (item) => {
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw Error("Data not recieved")
+        const listItems = await response.json();
+        setItems(listItems);
+        setfetchError(null)
+      } catch (err) {
+        setfetchError(err.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    setTimeout(() => {
+      (async () => await fetchItems())() //For is loading function the function is called inside the setTimeout function  
+    }, 2000)
+  }, [])
+
+
+  const addItem = async (item) => {
     const id = items.length ? items[items.length - 1].id + 1 : 1;
     const addNewItem = { id, checked: false, item }
     const listItems = [...items, addNewItem]
     setItems(listItems);
-    localStorage.setItem('todo_list', JSON.stringify(listItems));
+    // localStorage.setItem('todo_list', JSON.stringify(listItems));
+
+    const postOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(addNewItem)
+    }
+
+    const result = await apiRequest(API_URL, postOptions)
+    if (result) setfetchError(result)
   }
 
-  const handleCheck = (id) => {
-    const listCheck = items.map((item) => item.id === id ? { ...item, checked: !item.checked } : item);
-    setItems(listCheck);
-    localStorage.setItem('todo_list', JSON.stringify(listCheck));
+  const handleCheck = async (id) => {
+    const listItems = items.map((item) => item.id === id ? { ...item, checked: !item.checked } : item);
+    setItems(listItems);
+    // localStorage.setItem('todo_list', JSON.stringify(listCheck));
+
+    const myItems = listItems.filter((item) => item.id === id)
+
+    const updateOptions = {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ checked: myItems[0].checked })
+    }
+
+    const reqUrl = `${API_URL}/${id}`
+    const result = await apiRequest(reqUrl, updateOptions)
+    if (result) setfetchError(result)
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const deleteItem = items.filter((item) => item.id !== id)
     setItems(deleteItem);
-    localStorage.setItem('todo_list', JSON.stringify(deleteItem));
+    // localStorage.setItem('todo_list', JSON.stringify(deleteItem));
+
+    const deleteOptions = { method: 'DELETE' }
+
+    const reqUrl = `${API_URL}/${id}`
+    const result = await apiRequest(reqUrl, deleteOptions)
+    if (result) setfetchError(result)
   }
 
   const handleSubmit = (e) => {
@@ -72,35 +91,9 @@ function App() {
     if (!newItem) return;
     setNewItem('')
     addItem(newItem);
-    console.log('Submitted')
   }
 
   return (
-    // <div className="App">
-    //   <header className="App-header">
-    //     <img src={logo} className="App-logo" alt="logo" />
-    //     <p>
-    //       Edit <code>src/App.js</code> and save to reload.
-    //     </p>
-    //     <a
-    //       className="App-link"
-    //       href="https://reactjs.org"
-    //       target="_blank"
-    //       rel="noopener noreferrer"
-    //       >
-    //       Learn React
-    //     </a>
-    //   </header>
-    // </div>
-    // <div>
-    //   <p>̥̥
-    //     Hi this is Nirmal
-    //   </p>
-    //   <p>
-    //     I want to {handleNames()} money
-    //   </p>
-    // </div>
-
     <div className='App'>
       <Header title="React Application" />
       <AddItem
@@ -110,13 +103,17 @@ function App() {
       />
       <SearchItems
         search={search}
-        setSearch = {setSearch}
+        setSearch={setSearch}
       />
-      <Content
-        items={items.filter(item => ((item.item).toLowerCase()).includes(search.toLowerCase()))}
-        handleCheck={handleCheck}
-        handleDelete={handleDelete}
-      />
+      <main>
+        {isLoading && <p>Loading Items...</p>}
+        {fetchError && <p>{`Error: ${fetchError}`}</p>}
+        {!isLoading && !fetchError && <Content
+          items={items.filter(item => ((item.item).toLowerCase()).includes(search.toLowerCase()))}
+          handleCheck={handleCheck}
+          handleDelete={handleDelete}
+        />}
+      </main>
       <Footer
         length={items.length}
       />
